@@ -113,7 +113,7 @@ Olevel = level of the order O (often 1)
 [a, b] = the quaternion algebra is B = (a, b / Q)
 basi = A basis for O is [bas1, ..., bas4], where basi gives the basis element in terms of the basis (1, i, j, k).
 
-The data is stored in "./quaternion-order-gp.dat", and is sorted first by discB, then by Olevel.
+The data is stored in "./quaternion-orders-gp.dat", and is sorted first by discB, then by Olevel.
 """
 def make_gp_orders():
     f1 = open("../data/quaternion-orders/quaternion-orders.m", "r")
@@ -144,5 +144,50 @@ def make_gp_orders():
         f2.write(f"{x}\n")
     f2.close()
 
+"""
+Converts the polarized quaternion orders saved in ../data/quaternion-orders-polarized.m into quaternion-orders-polarized-gp.dat, so that the data can be gp-read.
+We save the polarized order as: [discB, Olevel, degmu, cardautmuO, mu, gens]
+discB = discriminant of the quaternion algebra
+Olevel = level of the order O (often 1)
+mu = the polarizing element, written in terms of the basis (1, i, j, k)
+degmu = degree of mu, i.e. mu^2=-discB*Olevel*degmu
+cardautmuO = Cardinality of Aut_{+/-mu}(O), should be even and at most 12?
+gens = generators of Aut_{+/-mu}(O), taken in the basis (1, i, j, k), with norms dividing discB (at least for maximal).
 
+The data is stored in "./quaternion-orders-polarized-gp.dat", and is sorted first by discB, then Olevel, and then degmu.
+"""
+def make_gp_polarized_orders():
+    f1 = open("../data/quaternion-orders/quaternion-orders-polarized.m", "r")
+    lineno = 0
+    allpolords = []
+    for line in f1:
+        lineno += 1
+        if lineno <= 3:
+            continue
+        x = line.split("?")
+        #The next line will break with non-maximal orders once added. At this point, fix this method as appropriate
+        discO = int(x[1])
+        mu = list(map(ZZ, x[2].replace("{", "").replace("}", "").split(",")))
+        degmu = int(x[3])
+        cardautmuO = int(x[5])
+        allgens = list(map(ZZ, x[8].replace("{", "").replace("}", "").split(",")))
+        gens = []
+        ind = -1
+        for ent in allgens:
+            ind += 1
+            ind %= 4
+            if ind == 0:
+                elt = [ent, 0, 0, 0]
+                continue
+            elt[ind] = ent
+            if ind == 3:
+                gens.append(elt)
+        entry = [discO, 1, degmu, cardautmuO, mu, gens]
+        allpolords.append(entry)
+    f1.close()
+    allpolords = sorted(allpolords, key = lambda element: (element[0], element[1], element[2]))
+    f2 = open("quaternion-orders-polarized-gp.dat", "w")
+    for x in allpolords:
+        f2.write(f"{x}\n")
+    f2.close()
 
