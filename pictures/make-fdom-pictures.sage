@@ -9,7 +9,7 @@ from sage.libs.pari.convert_sage import gen_to_sage
 
 
 #To encode the png file as a string.
-def encode_mcurve_plot(P, transparent=True):
+def encode_mcurve_plot(P, transparent = True):
     from io import BytesIO as IO
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from base64 import b64encode
@@ -18,19 +18,19 @@ def encode_mcurve_plot(P, transparent=True):
     virtual_file = IO()
     fig = P.matplotlib(axes_pad=None)
     ax = fig.axes[0]
-    ax.set_xlim(xmin=-1, xmax=1)
-    ax.set_ylim(ymin=-1, ymax=1)
+    ax.set_xlim(xmin = -1, xmax = 1)
+    ax.set_ylim(ymin = -1, ymax = 1)
     fig.set_canvas(FigureCanvasAgg(fig))
     fig.set_size_inches(2.5, 2.5) # images are 200 x 200 on the website
-    fig.savefig(virtual_file, format='png', bbox_inches='tight', transparent=transparent, dpi=120)
+    fig.savefig(virtual_file, format = 'png', bbox_inches = 'tight', transparent = transparent, dpi = 120)
     virtual_file.seek(0)
     buf = virtual_file.getbuffer()
     return "data:image/png;base64," + quote(b64encode(buf))
 
 #To make a hyperbolic polygon given the vertices.
 @rename_keyword(color='rgbcolor')
-@options(alpha=1, fill=True, thickness=0, rgbcolor="blue", zorder=2, linestyle='solid')
-def my_hyperbolic_polygon(pts, model="PD", resolution=200, circlecolor='black', add_circle=False, **options):
+@options(alpha = 1, fill = True, thickness = 0, rgbcolor = "blue", zorder = 2, linestyle = 'solid')
+def my_hyperbolic_polygon(pts, model = "PD", resolution = 200, circlecolor = 'black', add_circle = False, **options):
     r"""
     Return a hyperbolic polygon in the hyperbolic plane with vertices ``pts``.
 
@@ -100,4 +100,49 @@ def make_pictures_level1(Dlistwithmu):
         pngstr = encode_mcurve_plot(g)
         fil.write(f"{D}.1.1.{sizeautmu}.{genus}.a.1?{pngstr}\n")
     fil.close()
+
+
+#SECTION 3: PREPROCESSING TABLES
+
+
+"""
+Converts the quaternion orders saved in ../data/quaternion-orders.m into quaternion-orders-gp.dat, so that the data can be gp-read.
+We save the order as: [discB, Olevel, [a, b], [bas1, bas2, bas3, bas4]]
+discB = discriminant of the quaternion algebra
+Olevel = level of the order O (often 1)
+[a, b] = the quaternion algebra is B = (a, b / Q)
+basi = A basis for O is [bas1, ..., bas4], where basi gives the basis element in terms of the basis (1, i, j, k).
+
+The data is stored in "./quaternion-order-gp.dat", and is sorted first by discB, then by Olevel.
+"""
+def make_gp_orders():
+    f1 = open("../data/quaternion-orders/quaternion-orders.m", "r")
+    lineno = 0
+    allords = []
+    for line in f1:
+        lineno += 1
+        if lineno <= 3:
+            continue
+        x = line.split("?")
+        a = int(x[1])
+        b = int(x[2])
+        discO = int(x[3])
+        discB = int(x[4])
+        Olevel = int(discO / discB)
+        bn = list(map(ZZ, x[5].replace("{", "").replace("}", "").split(",")))
+        bd = list(map(ZZ, x[6].replace("{", "").replace("}", "").split(",")))
+        bas1 = [bn[0]/bd[0], bn[1]/bd[0], bn[2]/bd[0], bn[3]/bd[0]]
+        bas2 = [bn[4]/bd[1], bn[5]/bd[1], bn[6]/bd[1], bn[7]/bd[1]]
+        bas3 = [bn[8]/bd[2], bn[9]/bd[2], bn[10]/bd[2], bn[11]/bd[2]]
+        bas4 = [bn[12]/bd[3], bn[13]/bd[3], bn[14]/bd[3], bn[15]/bd[3]]
+        entry = [discB, Olevel, [a, b], [bas1, bas2, bas3, bas4]]
+        allords.append(entry)
+    f1.close()
+    allords = sorted(allords, key = lambda element: (element[0], element[1]))
+    f2 = open("quaternion-orders-gp.dat", "w")
+    for x in allords:
+        f2.write(f"{x}\n")
+    f2.close()
+
+
 
